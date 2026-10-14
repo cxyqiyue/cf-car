@@ -4,34 +4,132 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loading...</title>
+    <style>
+        /* ========== 微信引导遮罩层样式 ========== */
+        #wx-guide {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 99999;
+            color: #fff;
+            font-family: -apple-system, sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #wx-guide.show { display: block; }
+
+        /* 右上角箭头 */
+        #wx-guide .arrow {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* 引导文字 */
+        #wx-guide .tip {
+            position: absolute;
+            top: 100px;
+            right: 30px;
+            background: #fff;
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 240px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        #wx-guide .tip::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            right: 20px;
+            width: 0; height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 8px solid #fff;
+        }
+        #wx-guide .tip b { color: #0093E9; }
+
+        /* 中央内容 */
+        #wx-guide .center {
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 90%;
+            max-width: 320px;
+        }
+        #wx-guide .center .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        #wx-guide .center h2 {
+            font-size: 20px;
+            margin: 0 0 10px;
+            font-weight: 500;
+        }
+        #wx-guide .center p {
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.6;
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
     <div id="app">正在加载...</div>
 
+    <!-- ========== 微信引导遮罩 ========== -->
+    <div id="wx-guide">
+        <svg class="arrow" viewBox="0 0 60 60" fill="none">
+            <path d="M30 5 L30 40 M30 40 L15 25 M30 40 L45 25"
+                  stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="tip">
+            请点击右上角 <b>···</b><br>
+            选择「<b>在浏览器中打开</b>」
+        </div>
+        <div class="center">
+            <div class="icon">🚗</div>
+            <h2>请在浏览器中打开</h2>
+            <p>微信内置浏览器功能受限<br>点击右上角菜单，选择在浏览器中打开</p>
+        </div>
+    </div>
+
     <script>
     (function () {
         var WORKER_URL = 'https://car.qyfy.kdns.fr';
-        // 去掉 /cf-car 前缀，保留 query
         var path = location.pathname.replace(/^\/cf-car/, '') || '/';
         var target = WORKER_URL + path + location.search;
 
-        // ===== 检测微信环境 =====
         var ua = navigator.userAgent.toLowerCase();
         var isWeixin = ua.indexOf('micromessenger') !== -1;
-        // 微信里 SW 不可靠，直接跳转到 Worker 域名
+
+        // ========== 微信环境：显示引导遮罩，不跳转 ==========
         if (isWeixin) {
-            console.log('[page] 检测到微信环境，直接跳转到 Worker');
-            location.replace(target);
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('wx-guide').classList.add('show');
             return;
         }
 
-        // ===== 其他浏览器：继续用 Service Worker 代理 =====
+        // ========== 其他不支持 SW 的浏览器：降级跳转 ==========
         if (!('serviceWorker' in navigator)) {
-            console.warn('[page] 不支持 SW，直接跳转到 Worker');
+            console.warn('[page] 不支持 SW，降级跳转到 Worker');
             location.replace(target);
             return;
         }
 
+        // ========== 支持 SW 的浏览器：走代理 ==========
         var refreshing = false;
 
         navigator.serviceWorker.addEventListener('controllerchange', function () {
@@ -56,7 +154,6 @@
                     refreshing = true;
                     window.location.reload();
                 } else if (!hasController) {
-                    // 如果两次都没接管成功，直接降级跳转到 Worker
                     console.warn('[page] SW 接管失败，降级跳转到 Worker');
                     location.replace(target);
                 } else {
