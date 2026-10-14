@@ -10,7 +10,7 @@
 - 6、地址一般为：https://<用户名>.github.io/cf-car
 
 未备案域名被拦截
-![未备案域名被拦截](https://i.ibb.co/23cpqnBF/IMG-20261014-154826.jpg)
+![未备案域名被拦截](https://i.ibb.co/ZzT9KsLB/IMG-20261014-160356.jpg)
 
 通过 github.io 跳转默认浏览器
 ![通过 github.io 跳转默认浏览器](https://i.ibb.co/r2yzdf2L/IMG-20261014-155718.jpg)
