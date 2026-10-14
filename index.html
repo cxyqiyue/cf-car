@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare Worker Proxy</title>
+    <title>Loading...</title>
 </head>
 <body>
-    <!-- 页面加载时的占位内容，Worker 生效后会被替换 -->
     <div id="app">正在加载 Worker 内容...</div>
 
     <script>
         if ('serviceWorker' in navigator) {
+            // 监听 controllerchange，SW 接管后立刻刷新，让页面真正由 Worker 渲染
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+
             // 使用 './sw.js' 确保在 github.io/cf-car/ 子目录下也能正确找到文件
             navigator.serviceWorker.register('./sw.js')
                 .then(() => {
                     console.log('SW registered successfully');
-                    // 如果当前页面还没有被 Service Worker 接管，则自动刷新一次
+                    // 首次加载如果还没被 SW 控制，主动刷新一次
                     if (!navigator.serviceWorker.controller) {
                         window.location.reload();
                     }
