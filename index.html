@@ -9,25 +9,56 @@
     <div id="app">正在加载 Worker 内容...</div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            // 监听 controllerchange，SW 接管后立刻刷新，让页面真正由 Worker 渲染
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            });
-
-            // 使用 './sw.js' 确保在 github.io/cf-car/ 子目录下也能正确找到文件
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => {
-                    console.log('SW registered successfully');
-                    // 首次加载如果还没被 SW 控制，主动刷新一次
-                    if (!navigator.serviceWorker.controller) {
-                        window.location.reload();
-                    }
-                })
-                .catch(err => {
-                    console.error('SW registration failed:', err);
-                });
+    (function () {
+        if (!('serviceWorker' in navigator)) {
+            console.error('[page] 浏览器不支持 Service Worker');
+            return;
         }
+
+        var refreshing = false;
+
+        // SW 一旦接管，就刷新页面
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            console.log('[page] controllerchange 触发');
+            if (refreshing) return;
+            refreshing = true;
+            console.log('[page] 正在刷新以应用 SW...');
+            window.location.reload();
+        });
+
+        console.log('[page] 开始注册 SW...');
+
+        // updateViaCache: 'none' 强制每次都拉最新 sw.js，避免浏览器缓存旧版本
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+            .then(function (reg) {
+                console.log('[page] SW 注册成功, scope =', reg.scope);
+                // 等待 SW 变为 active
+                return navigator.serviceWorker.ready;
+            })
+            .then(function (reg) {
+                console.log('[page] SW 已就绪, active 状态:', reg.active && reg.active.state);
+                var hasController = !!navigator.serviceWorker.controller;
+                console.log('[page] 当前是否已被 SW 控制:', hasController);
+
+                // 无论是否已被控制，只要这次是首次加载，都刷新一次确保接管生效
+                // 通过 sessionStorage 判断，避免无限刷新
+                if (!sessionStorage.getItem('sw_reloaded')) {
+                    sessionStorage.setItem('sw_reloaded', '1');
+                    console.log('[page] 首次加载，强制刷新让 SW 接管...');
+                    refreshing = true;
+                    window.location.reload();
+                } else if (!hasController) {
+                    console.log('[page] 仍未被控制，再刷新一次...');
+                    refreshing = true;
+                    window.location.reload();
+                } else {
+                    console.log('[page] SW 已完全接管本次会话');
+                }
+            })
+            .catch(function (err) {
+                console.error('[page] SW 注册失败:', err);
+            });
+    })();
     </script>
 </body>
 </html>
