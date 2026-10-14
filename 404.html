@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>挪车处理</title>
+<style>
+  body { margin:0; font-family:-apple-system,sans-serif; background:#0f172a; color:#fff; }
+  .wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:40px 20px; text-align:center; }
+  h1 { font-size:22px; margin:20px 0 10px; }
+  p { color:#94a3b8; line-height:1.8; font-size:14px; }
+  .dots { display:inline-block; background:#0093E9; color:#fff; padding:2px 10px; border-radius:10px; font-weight:bold; margin:0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="font-size:64px;">🚗</div>
+  <h1>请在浏览器中打开</h1>
+  <p>微信内置浏览器功能受限<br>请点击右上角 <span class="dots">···</span><br>选择「<strong>在浏览器中打开</strong>」</p>
+</div>
+
+<script>
+(function () {
+  var WORKER_URL = 'https://car.qyfy.kdns.fr';
+  var path = location.pathname.replace(/^\/cf-car/, '') || '/';
+  var target = WORKER_URL + path + location.search;
+
+  var isWeixin = /micromessenger/i.test(navigator.userAgent);
+
+  // 微信 → 什么都不做，让上面的引导页显示
+  if (isWeixin) return;
+
+  // 非微信 → 直接跳转到 Worker 域名
+  location.replace(target);
+})();
+</script>
+</body>
+</html>
