@@ -1,0 +1,7 @@
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js') // ③ 如果 sw.js 不在根目录，这里要对应修改
+    .then(() => console.log('SW registered'))
+    .catch(err => console.error('SW registration failed', err));
+}
+</script>
