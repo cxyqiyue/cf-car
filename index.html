@@ -1,7 +1,29 @@
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js') // ③ 如果 sw.js 不在根目录，这里要对应修改
-    .then(() => console.log('SW registered'))
-    .catch(err => console.error('SW registration failed', err));
-}
-</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Worker Proxy</title>
+</head>
+<body>
+    <!-- 页面加载时的占位内容，Worker 生效后会被替换 -->
+    <div id="app">正在加载 Worker 内容...</div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            // 使用 './sw.js' 确保在 github.io/cf-car/ 子目录下也能正确找到文件
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => {
+                    console.log('SW registered successfully');
+                    // 如果当前页面还没有被 Service Worker 接管，则自动刷新一次
+                    if (!navigator.serviceWorker.controller) {
+                        window.location.reload();
+                    }
+                })
+                .catch(err => {
+                    console.error('SW registration failed:', err);
+                });
+        }
+    </script>
+</body>
+</html>
