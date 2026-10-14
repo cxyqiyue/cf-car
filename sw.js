@@ -1,5 +1,5 @@
 // sw.js
-const WORKER_URL = 'https://car.qyfy.kdns.fr'; // 末尾不要带 /
+const WORKER_URL = 'https://绑定的自定义域名'; // 末尾不要带 /
 
 console.log('[SW] sw.js 已加载');
 
