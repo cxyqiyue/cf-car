@@ -1,38 +1,292 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>挪车处理</title>
-<style>
-  body { margin:0; font-family:-apple-system,sans-serif; background:#0f172a; color:#fff; }
-  .wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:40px 20px; text-align:center; }
-  h1 { font-size:22px; margin:20px 0 10px; }
-  p { color:#94a3b8; line-height:1.8; font-size:14px; }
-  .dots { display:inline-block; background:#0093E9; color:#fff; padding:2px 10px; border-radius:10px; font-weight:bold; margin:0 4px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正在处理...</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            background: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* ========== 微信引导遮罩 ========== */
+        #wx-guide {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            color: #fff;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            animation: fadeIn 0.4s ease-out;
+        }
+        #wx-guide.show { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        #wx-guide::before {
+            content: '';
+            position: absolute;
+            top: -30%; right: -30%;
+            width: 80%; height: 80%;
+            background: radial-gradient(circle, rgba(0, 147, 233, 0.28) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        #wx-guide::after {
+            content: '';
+            position: absolute;
+            bottom: -20%; left: -20%;
+            width: 60%; height: 60%;
+            background: radial-gradient(circle, rgba(128, 208, 199, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 8px; right: 8px;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            animation: pulse 1.8s ease-out infinite;
+            pointer-events: none;
+        }
+        .pulse-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 147, 233, 0.6);
+            animation: pulse 1.8s ease-out infinite 0.5s;
+        }
+        @keyframes pulse {
+            0%   { transform: scale(0.7); opacity: 1; }
+            100% { transform: scale(1.7); opacity: 0; }
+        }
+
+        .arrow-curve {
+            position: absolute;
+            top: 65px; right: 55px;
+            width: 110px; height: 110px;
+            pointer-events: none;
+            animation: floatArrow 2s ease-in-out infinite;
+        }
+        @keyframes floatArrow {
+            0%, 100% { transform: translate(0, 0); }
+            50%      { transform: translate(6px, -6px); }
+        }
+        .arrow-curve path {
+            stroke: #fff;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            stroke-dasharray: 250;
+            stroke-dashoffset: 250;
+            animation: drawArrow 1.2s ease-out 0.4s forwards;
+            filter: drop-shadow(0 0 8px rgba(0, 147, 233, 0.9));
+        }
+        @keyframes drawArrow { to { stroke-dashoffset: 0; } }
+
+        .guide-tip {
+            position: absolute;
+            top: 180px; right: 30px;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            color: #1e293b;
+            padding: 16px 22px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.7;
+            max-width: 260px;
+            box-shadow: 0 12px 32px rgba(0, 147, 233, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px) scale(0.9); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        .guide-tip::before {
+            content: '';
+            position: absolute;
+            top: -10px; right: 30px;
+            width: 0; height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 10px solid #fff;
+        }
+        .guide-tip .dots {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #0093E9;
+            color: #fff;
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 18px;
+            line-height: 1;
+            vertical-align: middle;
+            margin: 0 4px;
+            box-shadow: 0 3px 10px rgba(0, 147, 233, 0.5);
+            letter-spacing: -1px;
+        }
+        .guide-tip .hl { color: #0093E9; font-weight: 600; }
+
+        .center-card {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 88%;
+            max-width: 340px;
+            margin-top: 60px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            padding: 36px 24px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            animation: cardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both;
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to   { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        .center-card .icon-wrap {
+            width: 80px; height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0, 147, 233, 0.4);
+            position: relative;
+        }
+        .center-card .icon-wrap::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #0093E9, #80D0C7);
+            z-index: -1;
+            filter: blur(12px);
+            opacity: 0.55;
+        }
+        .center-card .icon-wrap svg { width: 44px; height: 44px; fill: #fff; }
+
+        .center-card h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+        .center-card p {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+        .center-card p strong { color: #38bdf8; font-weight: 600; }
+
+        .footer-note {
+            position: absolute;
+            bottom: 40px; left: 0; right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            padding: 0 30px;
+            animation: fadeIn 1s ease-out 1.1s both;
+        }
+        .footer-note .shield {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .footer-note .shield svg { width: 14px; height: 14px; fill: #10b981; }
+    </style>
 </head>
 <body>
-<div class="wrap">
-  <div style="font-size:64px;">🚗</div>
-  <h1>请在浏览器中打开</h1>
-  <p>微信内置浏览器功能受限<br>请点击右上角 <span class="dots">···</span><br>选择「<strong>在浏览器中打开</strong>」</p>
-</div>
+    <div id="loading">正在加载...</div>
 
-<script>
-(function () {
-  var WORKER_URL = 'https://car.qyfy.kdns.fr';
-  var path = location.pathname.replace(/^\/cf-car/, '') || '/';
-  var target = WORKER_URL + path + location.search;
+    <div id="wx-guide">
+        <div class="pulse-ring"></div>
 
-  var isWeixin = /micromessenger/i.test(navigator.userAgent);
+        <svg class="arrow-curve" viewBox="0 0 100 100">
+            <path d="M 15 85 Q 25 40 72 25" />
+            <path d="M 58 18 L 76 24 L 70 42" />
+        </svg>
 
-  // 微信 → 什么都不做，让上面的引导页显示
-  if (isWeixin) return;
+        <div class="guide-tip">
+            请点击右上角 <span class="dots">···</span><br>
+            <span class="hl">在浏览器中打开</span> 本页面
+        </div>
 
-  // 非微信 → 直接跳转到 Worker 域名
-  location.replace(target);
-})();
-</script>
+        <div class="center-card">
+            <div class="icon-wrap">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                </svg>
+            </div>
+            <h2>请在浏览器中打开</h2>
+            <p>微信内置浏览器功能受限<br>点击右上角菜单，选择 <strong>在浏览器中打开</strong></p>
+        </div>
+
+        <div class="footer-note">
+            <span class="shield">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                </svg>
+                请放心打开，本页面仅用于挪车通知
+            </span>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var WORKER_URL = 'https://car.qyfy.kdns.fr';
+        var path = location.pathname.replace(/^\/cf-car/, '') || '/';
+        var target = WORKER_URL + path + location.search;
+
+        var isWeixin = /micromessenger/i.test(navigator.userAgent);
+
+        // 微信环境：显示美化引导遮罩
+        if (isWeixin) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('wx-guide').classList.add('show');
+            return;
+        }
+
+        // 非微信环境：直接从 Worker 加载内容
+        fetch(target)
+            .then(function (res) { return res.text(); })
+            .then(function (html) {
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(function (err) {
+                console.error('加载失败:', err);
+                document.getElementById('loading').innerText = '加载失败，请刷新重试';
+            });
+    })();
+    </script>
 </body>
 </html>
