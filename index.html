@@ -6,57 +6,66 @@
     <title>Loading...</title>
 </head>
 <body>
-    <div id="app">正在加载 Worker 内容...</div>
+    <div id="app">正在加载...</div>
 
     <script>
     (function () {
+        var WORKER_URL = 'https://car.qyfy.kdns.fr';
+        // 去掉 /cf-car 前缀，保留 query
+        var path = location.pathname.replace(/^\/cf-car/, '') || '/';
+        var target = WORKER_URL + path + location.search;
+
+        // ===== 检测微信环境 =====
+        var ua = navigator.userAgent.toLowerCase();
+        var isWeixin = ua.indexOf('micromessenger') !== -1;
+        // 微信里 SW 不可靠，直接跳转到 Worker 域名
+        if (isWeixin) {
+            console.log('[page] 检测到微信环境，直接跳转到 Worker');
+            location.replace(target);
+            return;
+        }
+
+        // ===== 其他浏览器：继续用 Service Worker 代理 =====
         if (!('serviceWorker' in navigator)) {
-            console.error('[page] 浏览器不支持 Service Worker');
+            console.warn('[page] 不支持 SW，直接跳转到 Worker');
+            location.replace(target);
             return;
         }
 
         var refreshing = false;
 
-        // SW 一旦接管，就刷新页面
         navigator.serviceWorker.addEventListener('controllerchange', function () {
-            console.log('[page] controllerchange 触发');
             if (refreshing) return;
             refreshing = true;
-            console.log('[page] 正在刷新以应用 SW...');
             window.location.reload();
         });
 
-        console.log('[page] 开始注册 SW...');
+        console.log('[page] 开始注册 sw.js ...');
 
-        // updateViaCache: 'none' 强制每次都拉最新 sw.js，避免浏览器缓存旧版本
         navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
             .then(function (reg) {
                 console.log('[page] SW 注册成功, scope =', reg.scope);
-                // 等待 SW 变为 active
                 return navigator.serviceWorker.ready;
             })
             .then(function (reg) {
-                console.log('[page] SW 已就绪, active 状态:', reg.active && reg.active.state);
                 var hasController = !!navigator.serviceWorker.controller;
-                console.log('[page] 当前是否已被 SW 控制:', hasController);
+                console.log('[page] SW 已就绪, 是否已被控制:', hasController);
 
-                // 无论是否已被控制，只要这次是首次加载，都刷新一次确保接管生效
-                // 通过 sessionStorage 判断，避免无限刷新
-                if (!sessionStorage.getItem('sw_reloaded')) {
-                    sessionStorage.setItem('sw_reloaded', '1');
-                    console.log('[page] 首次加载，强制刷新让 SW 接管...');
+                if (!sessionStorage.getItem('sw_reloaded_v1')) {
+                    sessionStorage.setItem('sw_reloaded_v1', '1');
                     refreshing = true;
                     window.location.reload();
                 } else if (!hasController) {
-                    console.log('[page] 仍未被控制，再刷新一次...');
-                    refreshing = true;
-                    window.location.reload();
+                    // 如果两次都没接管成功，直接降级跳转到 Worker
+                    console.warn('[page] SW 接管失败，降级跳转到 Worker');
+                    location.replace(target);
                 } else {
-                    console.log('[page] SW 已完全接管本次会话');
+                    console.log('[page] SW 已完全接管');
                 }
             })
             .catch(function (err) {
-                console.error('[page] SW 注册失败:', err);
+                console.error('[page] SW 注册失败，降级跳转:', err);
+                location.replace(target);
             });
     })();
     </script>
